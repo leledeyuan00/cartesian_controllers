@@ -6,16 +6,21 @@ set(CMAKE_CXX_STANDARD 17)
 set(ADDITIONAL_COMPILE_OPTIONS -Wall -Wextra -Wpedantic -Wno-unused-parameter)
 add_compile_options(${ADDITIONAL_COMPILE_OPTIONS})
 
+# Set build type to "Release" by default
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif(NOT CMAKE_BUILD_TYPE)
+
 # Use CMake to pass the current ROS_DISTRO via variables into a preprocessor template.
-# We then include this file and switch between the API for foxy and galactic.
-if($ENV{ROS_DISTRO} STREQUAL "humble")
-        set(CARTESIAN_CONTROLLERS_HUMBLE TRUE)
-elseif($ENV{ROS_DISTRO} STREQUAL "galactic")
-        set(CARTESIAN_CONTROLLERS_GALACTIC TRUE)
-elseif($ENV{ROS_DISTRO} STREQUAL "foxy")
-        set(CARTESIAN_CONTROLLERS_FOXY TRUE)
+# We then include this file and switch between the different APIs.
+if($ENV{ROS_DISTRO} STREQUAL "jazzy")
+  set(CARTESIAN_CONTROLLERS_JAZZY TRUE)
+elseif($ENV{ROS_DISTRO} STREQUAL "iron")
+  set(CARTESIAN_CONTROLLERS_IRON TRUE)
+elseif($ENV{ROS_DISTRO} STREQUAL "humble")
+  set(CARTESIAN_CONTROLLERS_HUMBLE TRUE)
 else()
-        message(WARNING "ROS2 version must be {foxy|galactic|humble}")
+  message(WARNING "ROS2 version must be {jazzy|iron|humble}")
 endif()
 configure_file(include/cartesian_controller_base/ROS2VersionConfig.h.in ROS2VersionConfig.h)
 
@@ -88,6 +93,7 @@ target_include_directories(ik_solvers
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
+    ${CMAKE_BINARY_DIR}  # ROS2VersionConfig.h
 )
 
 # Prevent pluginlib from using boost

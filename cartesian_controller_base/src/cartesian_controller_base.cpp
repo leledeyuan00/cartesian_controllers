@@ -37,33 +37,33 @@
  */
 //-----------------------------------------------------------------------------
 
+#include <cartesian_controller_base/cartesian_controller_base.h>
+#include <urdf/model.h>
+#include <urdf_model/joint.h>
+
+#include <cmath>
+#include <kdl/jntarray.hpp>
+#include <kdl/tree.hpp>
+#include <kdl_parser/kdl_parser.hpp>
+
 #include "controller_interface/controller_interface.hpp"
 #include "controller_interface/helpers.hpp"
 #include "geometry_msgs/msg/detail/pose_stamped__struct.hpp"
 #include "geometry_msgs/msg/detail/twist_stamped__struct.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
-#include <cartesian_controller_base/cartesian_controller_base.h>
-#include <cmath>
-#include <kdl/jntarray.hpp>
-#include <kdl/tree.hpp>
-#include <kdl_parser/kdl_parser.hpp>
-#include <urdf/model.h>
-#include <urdf_model/joint.h>
 
 namespace cartesian_controller_base
 {
+CartesianControllerBase::CartesianControllerBase() {}
 
-CartesianControllerBase::CartesianControllerBase()
-{
-}
-
-controller_interface::InterfaceConfiguration CartesianControllerBase::command_interface_configuration() const
+controller_interface::InterfaceConfiguration
+  CartesianControllerBase::command_interface_configuration() const
 {
   controller_interface::InterfaceConfiguration conf;
   conf.type = controller_interface::interface_configuration_type::INDIVIDUAL;
   conf.names.reserve(m_joint_names.size() * m_cmd_interface_types.size());
-  for (const auto& type : m_cmd_interface_types)
+  for (const auto & type : m_cmd_interface_types)
   {
     for (const auto & joint_name : m_joint_names)
     {
@@ -73,11 +73,12 @@ controller_interface::InterfaceConfiguration CartesianControllerBase::command_in
   return conf;
 }
 
-controller_interface::InterfaceConfiguration CartesianControllerBase::state_interface_configuration() const
+controller_interface::InterfaceConfiguration
+  CartesianControllerBase::state_interface_configuration() const
 {
   controller_interface::InterfaceConfiguration conf;
   conf.type = controller_interface::interface_configuration_type::INDIVIDUAL;
-  conf.names.reserve(m_joint_names.size()); // Only position
+  conf.names.reserve(m_joint_names.size());  // Only position
   for (const auto & joint_name : m_joint_names)
   {
     conf.names.push_back(joint_name + "/position");
@@ -85,8 +86,8 @@ controller_interface::InterfaceConfiguration CartesianControllerBase::state_inte
   return conf;
 }
 
-#if defined CARTESIAN_CONTROLLERS_GALACTIC || defined CARTESIAN_CONTROLLERS_HUMBLE
-rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn CartesianControllerBase::on_init()
+rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+  CartesianControllerBase::on_init()
 {
   if (!m_initialized)
   {
@@ -105,36 +106,8 @@ rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn Cartes
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
 }
 
-#elif defined CARTESIAN_CONTROLLERS_FOXY
-controller_interface::return_type CartesianControllerBase::init(const std::string & controller_name)
-{
-  if (!m_initialized)
-  {
-    // Initialize lifecycle node
-    const auto ret = ControllerInterface::init(controller_name);
-    if (ret != controller_interface::return_type::OK)
-    {
-      return ret;
-    }
-
-    auto_declare<std::string>("ik_solver", "forward_dynamics");
-    auto_declare<std::string>("robot_description", "");
-    auto_declare<std::string>("robot_base_link", "");
-    auto_declare<std::string>("end_effector_link", "");
-    auto_declare<std::vector<std::string>>("joints", std::vector<std::string>());
-    auto_declare<std::vector<std::string>>("command_interfaces", std::vector<std::string>());
-    auto_declare<double>("solver.error_scale", 1.0);
-    auto_declare<int>("solver.iterations", 1);
-    auto_declare<bool>("solver.publish_state_feedback", false);
-    auto_declare<double>("emergency_stop_threshold", 10.0);
-    m_initialized = true;
-  }
-  return controller_interface::return_type::OK;
-}
-#endif
-
-rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn CartesianControllerBase::on_configure(
-    const rclcpp_lifecycle::State & previous_state)
+rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn 
+  CartesianControllerBase::on_configure(const rclcpp_lifecycle::State & previous_state)
 {
   if (m_configured)
   {
@@ -149,7 +122,7 @@ rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn Cartes
   {
     m_ik_solver = m_solver_loader->createSharedInstance(ik_solver);
   }
-  catch (pluginlib::PluginlibException& ex)
+  catch (pluginlib::PluginlibException & ex)
   {
     RCLCPP_ERROR(get_node()->get_logger(), ex.what());
     return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::ERROR;
@@ -157,7 +130,7 @@ rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn Cartes
 
   // Get kinematics specific configuration
   urdf::Model robot_model;
-  KDL::Tree   robot_tree;
+  KDL::Tree robot_tree;
 
   // Get the robot description from the parameter server
   // Create a temp Node for getting the robot_description
@@ -201,14 +174,15 @@ rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn Cartes
     RCLCPP_ERROR(get_node()->get_logger(), "Failed to parse urdf model from 'robot_description'");
     return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::ERROR;
   }
-  if (!kdl_parser::treeFromUrdfModel(robot_model,robot_tree))
+  if (!kdl_parser::treeFromUrdfModel(robot_model, robot_tree))
   {
     RCLCPP_ERROR(get_node()->get_logger(), "Failed to parse KDL tree from urdf model");
     return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::ERROR;
   }
-  if (!robot_tree.getChain(m_robot_base_link,m_end_effector_link,m_robot_chain))
+  if (!robot_tree.getChain(m_robot_base_link, m_end_effector_link, m_robot_chain))
   {
-    const std::string error = ""
+    const std::string error =
+      ""
       "Failed to parse robot chain from urdf model. "
       "Do robot_base_link and end_effector_link exist?";
     RCLCPP_ERROR(get_node()->get_logger(), error.c_str());
@@ -230,7 +204,8 @@ rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn Cartes
   {
     if (!robot_model.getJoint(m_joint_names[i]))
     {
-      RCLCPP_ERROR(get_node()->get_logger(), "Joint %s does not appear in robot_description", m_joint_names[i].c_str());
+      RCLCPP_ERROR(get_node()->get_logger(), "Joint %s does not appear in robot_description",
+                   m_joint_names[i].c_str());
       return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::ERROR;
     }
     if (robot_model.getJoint(m_joint_names[i])->type == urdf::Joint::CONTINUOUS)
@@ -247,9 +222,9 @@ rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn Cartes
   }
 
   // Initialize solvers
-  m_ik_solver->init(get_node(),m_robot_chain,upper_pos_limits,lower_pos_limits);
+  m_ik_solver->init(get_node(), m_robot_chain, upper_pos_limits, lower_pos_limits);
   KDL::Tree tmp("not_relevant");
-  tmp.addChain(m_robot_chain,"not_relevant");
+  tmp.addChain(m_robot_chain, "not_relevant");
   m_forward_kinematics_solver.reset(new KDL::TreeFkSolverPos_recursive(tmp));
   m_iterations = get_node()->get_parameter("solver.iterations").as_int();
   RCLCPP_INFO(get_node()->get_logger(), "Using %d iterations for inverse kinematics", m_iterations);
@@ -266,14 +241,12 @@ rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn Cartes
     RCLCPP_ERROR(get_node()->get_logger(), "No command_interfaces specified");
     return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::ERROR;
   }
-  for (const auto& type : m_cmd_interface_types)
+  for (const auto & type : m_cmd_interface_types)
   {
     if (type != hardware_interface::HW_IF_POSITION && type != hardware_interface::HW_IF_VELOCITY)
     {
-      RCLCPP_ERROR(
-        get_node()->get_logger(),
-        "Unsupported command interface: %s. Choose position or velocity",
-        type.c_str());
+      RCLCPP_ERROR(get_node()->get_logger(),
+                   "Unsupported command interface: %s. Choose position or velocity", type.c_str());
       return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::ERROR;
     }
   }
@@ -283,12 +256,12 @@ rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn Cartes
 
   // Controller-internal state publishing
   m_feedback_pose_publisher =
-    std::make_shared<realtime_tools::RealtimePublisher<geometry_msgs::msg::PoseStamped> >(
+    std::make_shared<realtime_tools::RealtimePublisher<geometry_msgs::msg::PoseStamped>>(
       get_node()->create_publisher<geometry_msgs::msg::PoseStamped>(
         std::string(get_node()->get_name()) + "/current_pose", 3));
 
   m_feedback_twist_publisher =
-    std::make_shared<realtime_tools::RealtimePublisher<geometry_msgs::msg::TwistStamped> >(
+    std::make_shared<realtime_tools::RealtimePublisher<geometry_msgs::msg::TwistStamped>>(
       get_node()->create_publisher<geometry_msgs::msg::TwistStamped>(
         std::string(get_node()->get_name()) + "/current_twist", 3));
 
@@ -299,8 +272,8 @@ rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn Cartes
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
 }
 
-rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn CartesianControllerBase::on_deactivate(
-    const rclcpp_lifecycle::State & previous_state)
+rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+  CartesianControllerBase::on_deactivate(const rclcpp_lifecycle::State & previous_state)
 {
   stopCurrentMotion();
 
@@ -315,8 +288,8 @@ rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn Cartes
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
 }
 
-rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn CartesianControllerBase::on_activate(
-    const rclcpp_lifecycle::State & previous_state)
+rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+  CartesianControllerBase::on_activate(const rclcpp_lifecycle::State & previous_state)
 {
   if (m_active)
   {
@@ -324,36 +297,28 @@ rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn Cartes
   }
 
   // Get command handles.
-  for (const auto& type : m_cmd_interface_types)
+  for (const auto & type : m_cmd_interface_types)
   {
-    if (!controller_interface::get_ordered_interfaces(command_interfaces_,
-                                                      m_joint_names,
-                                                      type,
+    if (!controller_interface::get_ordered_interfaces(command_interfaces_, m_joint_names, type,
                                                       (type == hardware_interface::HW_IF_POSITION)
                                                         ? m_joint_cmd_pos_handles
                                                         : m_joint_cmd_vel_handles))
     {
-      RCLCPP_ERROR(get_node()->get_logger(),
-                   "Expected %zu '%s' command interfaces, got %zu.",
-                   m_joint_names.size(),
-                   type.c_str(),
-                   (type == hardware_interface::HW_IF_POSITION)
-                   ? m_joint_cmd_pos_handles.size()
-                   : m_joint_cmd_vel_handles.size());
+      RCLCPP_ERROR(get_node()->get_logger(), "Expected %zu '%s' command interfaces, got %zu.",
+                   m_joint_names.size(), type.c_str(),
+                   (type == hardware_interface::HW_IF_POSITION) ? m_joint_cmd_pos_handles.size()
+                                                                : m_joint_cmd_vel_handles.size());
       return CallbackReturn::ERROR;
     }
   }
 
   // Get state handles.
-  if (!controller_interface::get_ordered_interfaces(state_interfaces_,
-                                                    m_joint_names,
+  if (!controller_interface::get_ordered_interfaces(state_interfaces_, m_joint_names,
                                                     hardware_interface::HW_IF_POSITION,
                                                     m_joint_state_pos_handles))
   {
-    RCLCPP_ERROR(get_node()->get_logger(),
-                 "Expected %zu '%s' state interfaces, got %zu.",
-                 m_joint_names.size(),
-                 hardware_interface::HW_IF_POSITION,
+    RCLCPP_ERROR(get_node()->get_logger(), "Expected %zu '%s' state interfaces, got %zu.",
+                 m_joint_names.size(), hardware_interface::HW_IF_POSITION,
                  m_joint_state_pos_handles.size());
     return CallbackReturn::ERROR;
   }
@@ -375,7 +340,7 @@ rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn Cartes
 }
 
 rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
-CartesianControllerBase::on_shutdown(const rclcpp_lifecycle::State& previous_state)
+  CartesianControllerBase::on_shutdown(const rclcpp_lifecycle::State & previous_state)
 {
   stopCurrentMotion();
 
@@ -390,7 +355,6 @@ CartesianControllerBase::on_shutdown(const rclcpp_lifecycle::State& previous_sta
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
 }
 
-
 void CartesianControllerBase::writeJointControlCmds()
 {
   if (get_node()->get_parameter("solver.publish_state_feedback").as_bool())
@@ -398,8 +362,9 @@ void CartesianControllerBase::writeJointControlCmds()
     publishStateFeedback();
   }
 
-  auto nan_in = [](const auto& values) -> bool {
-    for (const auto& value : values)
+  auto nan_in = [](const auto & values) -> bool
+  {
+    for (const auto & value : values)
     {
       if (std::isnan(value))
       {
@@ -411,14 +376,10 @@ void CartesianControllerBase::writeJointControlCmds()
 
   if (nan_in(m_simulated_joint_motion.positions) || nan_in(m_simulated_joint_motion.velocities))
   {
-    RCLCPP_ERROR(get_node()->get_logger(),
-                 "NaN detected in internal model. It's unlikely to recover from this. Shutting down.");
-
-#if defined CARTESIAN_CONTROLLERS_HUMBLE
+    RCLCPP_ERROR(
+      get_node()->get_logger(),
+      "NaN detected in internal model. It's unlikely to recover from this. Shutting down.");
     get_node()->shutdown();
-#elif defined CARTESIAN_CONTROLLERS_FOXY || defined CARTESIAN_CONTROLLERS_GALACTIC
-    this->shutdown();
-#endif
     return;
   }
 
@@ -426,19 +387,14 @@ void CartesianControllerBase::writeJointControlCmds()
   if (checkEmergencyStop())
   {
     RCLCPP_ERROR(get_node()->get_logger(), "Emergency stop detected. Shutting down.");
-#if defined CARTESIAN_CONTROLLERS_HUMBLE
-      this->on_shutdown(rclcpp_lifecycle::State());
-      get_node()->shutdown();
-#elif defined CARTESIAN_CONTROLLERS_FOXY || defined CARTESIAN_CONTROLLERS_GALACTIC
-      this->on_shutdown(rclcpp_lifecycle::State());
-      this->shutdown();
-#endif
+    this->on_shutdown(rclcpp_lifecycle::State());
+    get_node()->shutdown();
     return;
   }
 
 
   // Write all available types.
-  for (const auto& type : m_cmd_interface_types)
+  for (const auto & type : m_cmd_interface_types)
   {
     if (type == hardware_interface::HW_IF_POSITION)
     {
@@ -467,16 +423,15 @@ std::vector<double> CartesianControllerBase::getJointPositions()
   return positions;
 }
 
-void CartesianControllerBase::computeJointControlCmds(const ctrl::Vector6D& error, const rclcpp::Duration& period)
+void CartesianControllerBase::computeJointControlCmds(const ctrl::Vector6D& error, 
+                                                      const rclcpp::Duration& period)
 {
   // PD controlled system input
   m_error_scale = get_node()->get_parameter("solver.error_scale").as_double();
-  m_cartesian_input = m_error_scale * m_spatial_controller(error,period);
+  m_cartesian_input = m_error_scale * m_spatial_controller(error, period);
 
   // Simulate one step forward
-  m_simulated_joint_motion = m_ik_solver->getJointControlCmds(
-      period,
-      m_cartesian_input);
+  m_simulated_joint_motion = m_ik_solver->getJointControlCmds(period, m_cartesian_input);
 
   m_ik_solver->updateKinematics();
   if (!m_compute_initialized){
@@ -500,7 +455,8 @@ void CartesianControllerBase::setJointCommandHandles(const trajectory_msgs::msg:
   m_ik_solver->updateKinematics();
 }
 
-ctrl::Vector6D CartesianControllerBase::displayInBaseLink(const ctrl::Vector6D& vector, const std::string& from)
+ctrl::Vector6D CartesianControllerBase::displayInBaseLink(const ctrl::Vector6D & vector,
+                                                          const std::string & from)
 {
   // Adjust format
   KDL::Wrench wrench_kdl;
@@ -510,10 +466,7 @@ ctrl::Vector6D CartesianControllerBase::displayInBaseLink(const ctrl::Vector6D& 
   }
 
   KDL::Frame transform_kdl;
-  m_forward_kinematics_solver->JntToCart(
-      m_ik_solver->getPositions(),
-      transform_kdl,
-      from);
+  m_forward_kinematics_solver->JntToCart(m_ik_solver->getPositions(), transform_kdl, from);
 
   // Rotate into new reference frame
   wrench_kdl = transform_kdl.M * wrench_kdl;
@@ -528,38 +481,29 @@ ctrl::Vector6D CartesianControllerBase::displayInBaseLink(const ctrl::Vector6D& 
   return out;
 }
 
-ctrl::Matrix6D CartesianControllerBase::displayInBaseLink(const ctrl::Matrix6D& tensor, const std::string& from)
+ctrl::Matrix6D CartesianControllerBase::displayInBaseLink(const ctrl::Matrix6D & tensor,
+                                                          const std::string & from)
 {
   // Get rotation to base
   KDL::Frame R_kdl;
-  m_forward_kinematics_solver->JntToCart(
-      m_ik_solver->getPositions(),
-      R_kdl,
-      from);
+  m_forward_kinematics_solver->JntToCart(m_ik_solver->getPositions(), R_kdl, from);
 
   // Adjust format
   ctrl::Matrix3D R;
-  R <<
-      R_kdl.M.data[0],
-      R_kdl.M.data[1],
-      R_kdl.M.data[2],
-      R_kdl.M.data[3],
-      R_kdl.M.data[4],
-      R_kdl.M.data[5],
-      R_kdl.M.data[6],
-      R_kdl.M.data[7],
-      R_kdl.M.data[8];
+  R << R_kdl.M.data[0], R_kdl.M.data[1], R_kdl.M.data[2], R_kdl.M.data[3], R_kdl.M.data[4],
+    R_kdl.M.data[5], R_kdl.M.data[6], R_kdl.M.data[7], R_kdl.M.data[8];
 
   // Treat diagonal blocks as individual 2nd rank tensors.
   // Display in base frame.
   ctrl::Matrix6D tmp = ctrl::Matrix6D::Zero();
-  tmp.topLeftCorner<3,3>() = R * tensor.topLeftCorner<3,3>() * R.transpose();
-  tmp.bottomRightCorner<3,3>() = R * tensor.bottomRightCorner<3,3>() * R.transpose();
+  tmp.topLeftCorner<3, 3>() = R * tensor.topLeftCorner<3, 3>() * R.transpose();
+  tmp.bottomRightCorner<3, 3>() = R * tensor.bottomRightCorner<3, 3>() * R.transpose();
 
   return tmp;
 }
 
-ctrl::Vector6D CartesianControllerBase::displayInTipLink(const ctrl::Vector6D& vector, const std::string& to)
+ctrl::Vector6D CartesianControllerBase::displayInTipLink(const ctrl::Vector6D & vector,
+                                                         const std::string & to)
 {
   // Adjust format
   KDL::Wrench wrench_kdl;
@@ -569,10 +513,7 @@ ctrl::Vector6D CartesianControllerBase::displayInTipLink(const ctrl::Vector6D& v
   }
 
   KDL::Frame transform_kdl;
-  m_forward_kinematics_solver->JntToCart(
-      m_ik_solver->getPositions(),
-      transform_kdl,
-      to);
+  m_forward_kinematics_solver->JntToCart(m_ik_solver->getPositions(), transform_kdl, to);
 
   // Rotate into new reference frame
   wrench_kdl = transform_kdl.M.Inverse() * wrench_kdl;
@@ -591,26 +532,26 @@ void CartesianControllerBase::publishStateFeedback()
 {
   // End-effector pose
   auto pose = m_ik_solver->getEndEffectorPose();
-  if (m_feedback_pose_publisher->trylock()){
+  if (m_feedback_pose_publisher->trylock())
+  {
     m_feedback_pose_publisher->msg_.header.stamp = get_node()->now();
     m_feedback_pose_publisher->msg_.header.frame_id = m_robot_base_link;
     m_feedback_pose_publisher->msg_.pose.position.x = pose.p.x();
     m_feedback_pose_publisher->msg_.pose.position.y = pose.p.y();
     m_feedback_pose_publisher->msg_.pose.position.z = pose.p.z();
 
-    pose.M.GetQuaternion(
-        m_feedback_pose_publisher->msg_.pose.orientation.x,
-        m_feedback_pose_publisher->msg_.pose.orientation.y,
-        m_feedback_pose_publisher->msg_.pose.orientation.z,
-        m_feedback_pose_publisher->msg_.pose.orientation.w
-        );
+    pose.M.GetQuaternion(m_feedback_pose_publisher->msg_.pose.orientation.x,
+                         m_feedback_pose_publisher->msg_.pose.orientation.y,
+                         m_feedback_pose_publisher->msg_.pose.orientation.z,
+                         m_feedback_pose_publisher->msg_.pose.orientation.w);
 
     m_feedback_pose_publisher->unlockAndPublish();
   }
 
   // End-effector twist
   auto twist = m_ik_solver->getEndEffectorVel();
-  if (m_feedback_twist_publisher->trylock()){
+  if (m_feedback_twist_publisher->trylock())
+  {
     m_feedback_twist_publisher->msg_.header.stamp = get_node()->now();
     m_feedback_twist_publisher->msg_.header.frame_id = m_robot_base_link;
     m_feedback_twist_publisher->msg_.twist.linear.x = twist[0];
@@ -622,13 +563,6 @@ void CartesianControllerBase::publishStateFeedback()
 
     m_feedback_twist_publisher->unlockAndPublish();
   }
-
 }
 
-bool CartesianControllerBase::checkEmergencyStop()
-{
-  return m_emergency_stop;
-}
-
-
-} // namespace
+}  // namespace cartesian_controller_base
