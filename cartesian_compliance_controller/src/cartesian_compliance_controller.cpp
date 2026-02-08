@@ -95,7 +95,10 @@ rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
 
   m_feedback_target_pose_publisher = get_node()->create_publisher<geometry_msgs::msg::PoseStamped>(
       std::string(get_node()->get_name()) + "/target_frame_monitor", 1);
-
+  
+  m_joint_cmd_service_active = false;
+  m_joint_service_start_time = Base::m_clock.now();
+  
   return TYPE::SUCCESS;
 }
 
