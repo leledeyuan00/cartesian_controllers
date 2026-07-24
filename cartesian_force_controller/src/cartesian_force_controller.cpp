@@ -338,19 +338,20 @@ void CartesianForceController::gravityCompensation(void)
   }
 
   // Publish current wrench if force enable is true
-  if (m_feedback_force_publisher->trylock() && !m_emergency_stop){
-    m_feedback_force_publisher->msg_.header.stamp = Base::m_clock.now();
-      m_feedback_force_publisher->msg_.header.frame_id = m_robot_base_link;
+  if (!m_emergency_stop){
+    geometry_msgs::msg::WrenchStamped wrench_msg;
+    wrench_msg.header.stamp = Base::m_clock.now();
+    wrench_msg.header.frame_id = m_robot_base_link;
     if (m_force_state_pub){
-      m_feedback_force_publisher->msg_.wrench.force.x = m_ft_sensor_wrench[0];
-      m_feedback_force_publisher->msg_.wrench.force.y = m_ft_sensor_wrench[1];
-      m_feedback_force_publisher->msg_.wrench.force.z = m_ft_sensor_wrench[2];
-      m_feedback_force_publisher->msg_.wrench.torque.x = m_ft_sensor_wrench[3];
-      m_feedback_force_publisher->msg_.wrench.torque.y = m_ft_sensor_wrench[4];
-      m_feedback_force_publisher->msg_.wrench.torque.z = m_ft_sensor_wrench[5];
+      wrench_msg.wrench.force.x = m_ft_sensor_wrench[0];
+      wrench_msg.wrench.force.y = m_ft_sensor_wrench[1];
+      wrench_msg.wrench.force.z = m_ft_sensor_wrench[2];
+      wrench_msg.wrench.torque.x = m_ft_sensor_wrench[3];
+      wrench_msg.wrench.torque.y = m_ft_sensor_wrench[4];
+      wrench_msg.wrench.torque.z = m_ft_sensor_wrench[5];
     }
 
-    m_feedback_force_publisher->unlockAndPublish();
+    m_feedback_force_publisher->try_publish(wrench_msg);
   }
 
   // Normalize the force part of the wrench to the mass of the end-effector

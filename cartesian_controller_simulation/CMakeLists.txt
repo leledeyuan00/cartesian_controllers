@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.20)
 project(cartesian_controller_simulation)
 
 # Default to C99
@@ -59,14 +59,11 @@ target_include_directories(${PROJECT_NAME} PUBLIC
         $<INSTALL_INTERFACE:include>
 )
 
-ament_target_dependencies(${PROJECT_NAME}
-        cartesian_controller_base
-        hardware_interface
-        pluginlib
-        rclcpp
-)
-
-target_link_libraries(${PROJECT_NAME}
+target_link_libraries(${PROJECT_NAME} PUBLIC
+        cartesian_controller_base::cartesian_controller_base
+        hardware_interface::hardware_interface
+        pluginlib::pluginlib
+        rclcpp::rclcpp
         mujoco_simulator
 )
 
