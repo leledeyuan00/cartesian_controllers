@@ -190,7 +190,7 @@ ctrl::Vector6D CartesianForceController::computeForceError()
   }
 
   // Superimpose target wrench and sensor wrench in base frame
-  return Base::displayInBaseLink(m_ft_sensor_wrench, m_new_ft_sensor_ref) + target_wrench;
+  return m_ft_sensor_wrench + target_wrench;
 }
 
 void CartesianForceController::setFtSensorReferenceFrame(const std::string & new_ref)
