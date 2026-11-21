@@ -186,6 +186,14 @@ class CartesianControllerBase : public controller_interface::ControllerInterface
     }
 
     /**
+     * @brief Reset start time for the controller
+     */
+    void resetStartTime()
+    {
+      m_start_time = m_clock.now();
+    }
+
+    /**
      * @brief Check if trigger the emergency stop
      *
      * @return True if triggered, false otherwise
@@ -218,6 +226,7 @@ class CartesianControllerBase : public controller_interface::ControllerInterface
 
     rclcpp::Clock m_clock;
     rclcpp::Time m_start_time;
+    double m_start_warmup_coefficient = {0.0}; // [0.0, 1.0] coefficient to scale down the error at the beginning of the controller
     
   private:
 

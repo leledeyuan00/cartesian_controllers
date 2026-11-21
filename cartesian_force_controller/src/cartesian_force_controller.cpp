@@ -372,19 +372,8 @@ void CartesianForceController::gravityCompensation(void)
     ft_sensor_wrench_tmp = ft_sensor_wrench;
   }
 
-  double started_duration = Base::m_clock.now().seconds() - Base::m_start_time.seconds();
-  double smooth_duratiuon = 0.5;
-  double start_time = 0.5;
-  if (started_duration < start_time){
-    m_ft_sensor_wrench_start = ft_sensor_wrench_tmp;
-  }
-  else if (started_duration >= start_time && started_duration < (start_time + smooth_duratiuon)){
-    m_ft_sensor_wrench = m_ft_sensor_wrench_start * (started_duration - start_time)/smooth_duratiuon + (ft_sensor_wrench_tmp - m_ft_sensor_wrench_start);
-  }
-  else {
-    m_ft_sensor_wrench = ft_sensor_wrench_tmp;
-  }
-
+  m_ft_sensor_wrench = ft_sensor_wrench_tmp;
+  
   // Publish current wrench if force enable is true
   if (m_feedback_force_publisher->trylock() && !m_emergency_stop){
     m_feedback_force_publisher->msg_.header.stamp = Base::m_clock.now();

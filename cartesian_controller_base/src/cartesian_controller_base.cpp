@@ -469,9 +469,14 @@ std::vector<double> CartesianControllerBase::getJointPositions()
 
 void CartesianControllerBase::computeJointControlCmds(const ctrl::Vector6D& error, const rclcpp::Duration& period)
 {
+  double started_duration = m_clock.now().seconds() - m_start_time.seconds();
+  double smooth_duratiuon = 0.5;
+  double start_time = 0.5;
+  m_start_warmup_coefficient = std::min(1.0, std::max(0.0, (started_duration - start_time) / smooth_duratiuon));
+
   // PD controlled system input
   m_error_scale = get_node()->get_parameter("solver.error_scale").as_double();
-  m_cartesian_input = m_error_scale * m_spatial_controller(error,period);
+  m_cartesian_input = m_error_scale * m_spatial_controller(error,period) * m_start_warmup_coefficient;
 
   // Simulate one step forward
   m_simulated_joint_motion = m_ik_solver->getJointControlCmds(

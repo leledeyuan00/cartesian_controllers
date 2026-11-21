@@ -200,6 +200,7 @@ controller_interface::return_type CartesianComplianceController::update()
     if (current_duration >= m_joint_service_duration)
     {
       m_joint_cmd_service_active = false;
+      MotionBase::resetStartTime();
       MotionBase::resetTargetFrame();
       RCLCPP_INFO(get_node()->get_logger(), "Joint command finished");
 
